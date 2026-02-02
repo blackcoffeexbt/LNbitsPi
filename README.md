@@ -1,4 +1,4 @@
-# LNbits NixOS Raspberry Pi 4 image (Ethernet)
+# LNbits NixOS Raspberry Pi 4 image
 
 This repo builds a flashable NixOS SD-card image for Raspberry Pi 4 that runs LNbits as a systemd service.
 
