@@ -27,8 +27,14 @@ jobs:
             extra-platforms = aarch64-linux
             accept-flake-config = true
 
-      # Optional: speeds up if LNbits publishes cache hits; harmless if not
-      - name: Use LNbits Cachix (optional)
+      # Use Cachix binary caches to speed up builds
+      - name: Use nix-community Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: nix-community
+        continue-on-error: true
+
+      - name: Use LNbits Cachix
         uses: cachix/cachix-action@v15
         with:
           name: lnbits
