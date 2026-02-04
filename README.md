@@ -14,29 +14,115 @@ A pre-configured, bootable NixOS SD card image for Raspberry Pi 4 that runs [LNb
 
 ## Quick start: Download and flash
 
-1. Go to **[Releases](../../releases)** and download the latest `*.img.zst` and `SHA256SUMS.txt`
-2. Verify the checksum:
-   ```bash
-   sha256sum -c SHA256SUMS.txt
-   ```
-3. Flash the image to an SD card:
-   - **Raspberry Pi Imager** (recommended - auto-decompresses)
-   - Or use command-line tools (see examples below)
+### Step 1: Download the image
 
-**Example on Linux/macOS:**
+1. Go to **[Releases](../../releases)**
+2. Download the latest `nixos-sd-image-*-aarch64-linux.img.zst` file
+3. (Optional) Download `SHA256SUMS.txt` to verify integrity
 
+### Step 2: Flash to SD card
+
+Choose your preferred method based on your operating system:
+
+#### **Method 1: Raspberry Pi Imager (Easiest - All Platforms)**
+
+**Recommended for most users** - Works on Windows, macOS, and Linux.
+
+1. Download and install [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+2. Insert your SD card (16GB minimum recommended)
+3. Open Raspberry Pi Imager
+4. Click **"Choose OS"** → Scroll down → **"Use custom"**
+5. Select your downloaded `*.img.zst` file (no need to decompress!)
+6. Click **"Choose Storage"** and select your SD card
+7. Click **"Write"** and wait for completion
+
+✅ Raspberry Pi Imager automatically decompresses `.zst` files!
+
+#### **Method 2: balenaEtcher (Easy - All Platforms)**
+
+Another user-friendly option that works on Windows, macOS, and Linux.
+
+1. Download and install [balenaEtcher](https://etcher.balena.io/)
+2. You'll need to **decompress the image first**:
+   - **Windows:** Use [7-Zip](https://www.7-zip.org/) or [PeaZip](https://peazip.github.io/)
+   - **macOS/Linux:** Run `zstd -d nixos-sd-image-*.img.zst` in terminal
+3. Open balenaEtcher
+4. Click **"Flash from file"** and select the decompressed `.img` file
+5. Click **"Select target"** and choose your SD card
+6. Click **"Flash!"**
+
+#### **Method 3: Command Line (Advanced Users)**
+
+**Linux:**
 ```bash
-# Option 1: Decompress and write in one command
-zstd -dc lnbits-nixos-pi4-*.img.zst | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
+# Option A: Decompress and write in one command
+zstd -dc nixos-sd-image-*.img.zst | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
 
-# Option 2: Decompress first, then write
-zstd -d lnbits-nixos-pi4-*.img.zst -o image.img
-sudo dd if=image.img of=/dev/sdX bs=4M status=progress conv=fsync
+# Option B: Decompress first, then write
+zstd -d nixos-sd-image-*.img.zst
+sudo dd if=nixos-sd-image-*.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-⚠️ Replace `/dev/sdX` with your actual SD card device. Use `lsblk` to find it.
+**macOS:**
+```bash
+# Find your SD card device (look for /dev/diskX)
+diskutil list
 
-4. Boot your Pi 4, find its IP address, and access LNbits at `http://<pi-ip>:9000`
+# Unmount the SD card (replace diskX with your device)
+diskutil unmountDisk /dev/diskX
+
+# Write the image (use rdiskX for faster writing)
+zstd -dc nixos-sd-image-*.img.zst | sudo dd of=/dev/rdiskX bs=4m
+
+# Eject when complete
+diskutil eject /dev/diskX
+```
+
+**Windows (PowerShell as Administrator):**
+```powershell
+# Install zstd if you don't have it
+# Download from: https://github.com/facebook/zstd/releases
+
+# Decompress
+zstd -d nixos-sd-image-*.img.zst
+
+# Use Rufus, Win32DiskImager, or dd for Windows to write the .img file
+```
+
+⚠️ **Warning:** Double-check your device name! Writing to the wrong device will destroy data.
+- Linux: Use `lsblk` to identify your SD card
+- macOS: Use `diskutil list` to identify your SD card
+- Windows: Check in Disk Management
+
+### Step 3: First boot
+
+1. Insert the SD card into your Raspberry Pi 4
+2. Connect ethernet cable (or configure WiFi later)
+3. Power on the Pi
+4. Wait 2-3 minutes for first boot to complete
+5. Find the Pi's IP address:
+   - Check your router's DHCP client list, or
+   - Use a network scanner like `nmap`, `angry-ip-scanner`, or your router's admin interface
+   - Or connect a monitor/keyboard and run `ip addr`
+
+### Step 4: Access LNbits
+
+**SSH into your Pi:**
+```bash
+ssh lnbitsadmin@<pi-ip-address>
+# Default password: lnbits
+```
+
+⚠️ **Important:** Change the default password immediately!
+```bash
+passwd
+```
+
+**Access LNbits web interface:**
+
+Open your browser and go to: `http://<pi-ip-address>:9000`
+
+That's it! Your LNbits node is now running on NixOS.
 
 # Build from source
 
@@ -231,6 +317,56 @@ Access LNbits at: `http://<pi-ip-address>:9000`
 
 ## Troubleshooting
 
+### Flashing Issues
+
+**"Not enough space" error:**
+- Ensure your SD card is at least 8GB (16GB+ recommended)
+- Some SD cards report less usable space than advertised
+
+**Image won't decompress:**
+- **Windows:** Install [7-Zip](https://www.7-zip.org/) or [PeaZip](https://peazip.github.io/)
+- **macOS:** Install zstd: `brew install zstd`
+- **Linux:** Install zstd: `sudo apt install zstd` or `sudo yum install zstd`
+
+**"Permission denied" when flashing:**
+- Linux/macOS: Use `sudo` with dd commands
+- Windows: Run as Administrator
+- Make sure the SD card is not mounted/in use
+
+**Flashing fails or SD card not detected:**
+- Try a different SD card (some old/cheap cards have compatibility issues)
+- Use a different SD card reader
+- Check if the SD card is write-protected (physical switch on some cards)
+
+### Boot Issues
+
+**Pi won't boot / No activity:**
+- Verify the image was written completely (check file sizes)
+- Try re-flashing the image
+- Ensure you're using a Raspberry Pi 4 (this image won't work on Pi 3 or earlier)
+- Check your power supply (Pi 4 needs a good 5V/3A USB-C supply)
+- Look for the green activity LED - it should blink during boot
+
+**Can't find the Pi's IP address:**
+- Wait 3-5 minutes for first boot (it takes longer than subsequent boots)
+- Check your router's connected devices list
+- Connect a monitor and keyboard to see boot messages and login directly
+- Try connecting via ethernet instead of WiFi (WiFi needs additional configuration)
+
+**Can't SSH into the Pi:**
+- Make sure you're on the same network
+- Try `ssh -v lnbitsadmin@<ip>` for verbose debugging
+- Check if port 22 is open: `nmap -p 22 <ip>`
+- Wait a bit longer - first boot takes time
+
+**Can't access LNbits web interface:**
+- Verify LNbits is running: `ssh` into the Pi and run `systemctl status lnbits`
+- Check if port 9000 is open: `nmap -p 9000 <ip>`
+- Try accessing from a different device on the same network
+- Check firewall rules: `sudo iptables -L -n | grep 9000`
+
+### Build Issues (For developers)
+
 **Build is slow:** Building on x86_64 with QEMU emulation can take time. Make sure you've enabled the Cachix binary caches (step 3) to download pre-built packages instead of building from source. If you have access to a native aarch64 machine, building there will be much faster.
 
 **Out of disk space:** Ensure you have at least 20-30 GB free. Nix builds use significant temporary space.
@@ -238,6 +374,13 @@ Access LNbits at: `http://<pi-ip-address>:9000`
 **Out of memory:** Add swap space as shown in step 0, or use a machine with more RAM.
 
 **Kernel build from source:** If you see the kernel being built from source, ensure you've added the `raspberry-pi-nix` Cachix cache and that your flake is using the mainline kernel override.
+
+### Getting Help
+
+If you're still having issues:
+1. Check the [Issues](../../issues) page for similar problems
+2. Create a new issue with details about your setup and error messages
+3. Include the output of `systemctl status lnbits` if the Pi boots but LNbits isn't working
 
 ## Development
 
