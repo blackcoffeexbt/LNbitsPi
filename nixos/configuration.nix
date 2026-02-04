@@ -19,9 +19,14 @@
     PasswordAuthentication = true; # simple first boot; change to keys-only if you want
   };
 
-  # Optional: Prevent console blanking (keeps display active)
-  # Uncomment if you want to see a login prompt on HDMI
-  boot.kernelParams = [ "consoleblank=0" ];
+  # Enable console on HDMI (keeps display active and shows login prompt)
+  # The console=tty1 parameter ensures output goes to HDMI, not just serial UART
+  boot.kernelParams = [
+    "consoleblank=0"
+    "console=tty1"  # Force console output to HDMI/framebuffer
+  ];
+
+  # Enable getty (login prompt) on tty1
   systemd.services."getty@tty1".enable = true;
 
   # Create a login user for first boot

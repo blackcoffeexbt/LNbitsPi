@@ -355,17 +355,20 @@ Access LNbits at: `http://<pi-ip-address>:9000`
 
 ### Boot Issues
 
-**Screen goes black after boot messages (NORMAL for headless systems):**
-- **This is expected behavior!** The system is configured for SSH access only
+**Screen goes black after boot messages:**
+- **By default, this is expected behavior** - the system is configured for SSH access only
 - After showing "Reached target multi-user system", the display goes blank
 - The system is running fine and waiting for SSH connections
 - To verify: Check your router for the Pi's IP address or try `ssh lnbitsadmin@lnbits-pi4.local`
-- To enable console login on HDMI: Uncomment the lines in `nixos/configuration.nix`:
+- **To enable console login on HDMI**, the configuration needs these kernel parameters in `nixos/configuration.nix`:
   ```nix
-  boot.kernelParams = [ "consoleblank=0" ];
+  boot.kernelParams = [
+    "consoleblank=0"
+    "console=tty1"  # Force console to HDMI (otherwise it goes to serial UART)
+  ];
   systemd.services."getty@tty1".enable = true;
   ```
-  Then rebuild and reflash the image
+  The latest version already has these enabled. If using an older image, rebuild and reflash with the latest code.
 
 **Pi won't boot / No activity at all:**
 - Verify the image was written completely (check file sizes)
