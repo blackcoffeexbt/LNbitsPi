@@ -230,9 +230,10 @@ Enable the binary caches:
 
 ```bash
 cachix use nix-community
-cachix use lnbits
 cachix use raspberry-pi-nix
 ```
+
+**Note:** The standard nixpkgs cache is already enabled by default and provides most packages including LNbits dependencies.
 
 ## **4) Clone the repo and build the SD image**
 

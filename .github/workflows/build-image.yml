@@ -40,12 +40,6 @@ jobs:
           name: nix-community
         continue-on-error: true
 
-      - name: Use LNbits Cachix
-        uses: cachix/cachix-action@v15
-        with:
-          name: lnbits
-        continue-on-error: true
-
       - name: Use raspberry-pi-nix Cachix
         uses: cachix/cachix-action@v15
         with:
