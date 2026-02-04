@@ -23,7 +23,9 @@
       specialArgs = { inherit lnbits; };
       modules = [
         raspberry-pi-nix.nixosModules.raspberry-pi
-        raspberry-pi-nix.nixosModules.sd-image
+        # Use standard NixOS SD image module instead of raspberry-pi-nix's
+        # to avoid building custom kernel from source
+        "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"
         ./nixos/configuration.nix
       ];
     };
