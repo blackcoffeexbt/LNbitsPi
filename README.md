@@ -5,12 +5,21 @@ A pre-configured, bootable NixOS SD card image for Raspberry Pi 4 that runs [LNb
 ## What's included
 
 - **NixOS 24.11** (latest stable)
-- **LNbits** running as a systemd service on port 9000
+- **LNbits v1.4.2** running as a systemd service on port 9000
 - **SSH enabled** for remote access
 - **Mainline Linux kernel** (cached, no compilation needed)
 - **Raspberry Pi 4 optimizations** (64-bit, UART enabled)
 - **Firewall configured** (port 9000 open for LNbits)
 - **Default user:** `lnbitsadmin` / password: `lnbits` (⚠️ change on first boot!)
+
+### SD Card Partition Layout
+
+After flashing, your SD card will have two partitions:
+
+1. **FIRMWARE** (FAT32, ~100MB) - Boot partition with Raspberry Pi firmware, kernel, and config.txt
+2. **NIXOS_SD** (ext4, remaining space) - Root filesystem with the full NixOS system
+
+You can customize the firmware partition label by setting `raspberry-pi-nix.firmware-partition-label` in `nixos/configuration.nix`.
 
 ## Quick start: Download and flash
 

@@ -6,6 +6,9 @@
   # Specify the Raspberry Pi board (required by raspberry-pi-nix)
   raspberry-pi-nix.board = "bcm2711"; # Raspberry Pi 4
 
+  # Optional: Customize the firmware partition label (default is "FIRMWARE")
+  raspberry-pi-nix.firmware-partition-label = "LNbitsPi";
+
   networking.hostName = "lnbits-pi4";
   networking.useDHCP = true;
 
