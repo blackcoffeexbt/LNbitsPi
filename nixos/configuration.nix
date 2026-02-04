@@ -20,14 +20,19 @@
   };
 
   # Enable console on HDMI (keeps display active and shows login prompt)
-  # The console=tty1 parameter ensures output goes to HDMI, not just serial UART
+  # When multiple consoles are specified, the LAST one becomes the default/preferred
+  # We list serial first, then tty1 last so HDMI is the preferred console
   boot.kernelParams = [
     "consoleblank=0"
-    "console=tty1"  # Force console output to HDMI/framebuffer
+    "console=ttyAMA0,115200"  # Serial console (for UART debugging)
+    "console=tty1"             # HDMI console (last = preferred/default)
   ];
 
   # Enable getty (login prompt) on tty1
   systemd.services."getty@tty1".enable = true;
+
+  # Ensure autovt (automatic virtual terminals) are enabled
+  systemd.services."autovt@tty1".enable = true;
 
   # Create a login user for first boot
   # Change the username by modifying "lnbitsadmin" below
