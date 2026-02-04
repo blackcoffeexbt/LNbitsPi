@@ -54,12 +54,12 @@ jobs:
 
       - name: Dry-run (should not build linux-rpi)
         run: |
-          nix build .#nixosConfigurations.pi4.config.system.build.sdImage --dry-run 2>&1 | tee dryrun.txt
+          nix build .#sdImage --dry-run 2>&1 | tee dryrun.txt
           ! grep -q "linux-rpi" dryrun.txt
 
       - name: Build SD image
         run: |
-          nix build .#nixosConfigurations.pi4.config.system.build.sdImage
+          nix build .#sdImage
           ls -lah result/sd-image
 
       - name: Collect artefacts

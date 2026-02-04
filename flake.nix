@@ -26,5 +26,12 @@
         ./nixos/configuration.nix
       ];
     };
+
+    # Expose the SD image as a package for x86_64-linux
+    packages.x86_64-linux.sdImage =
+      self.nixosConfigurations.pi4.config.system.build.sdImage;
+
+    packages.x86_64-linux.default =
+      self.packages.x86_64-linux.sdImage;
   };
 }
