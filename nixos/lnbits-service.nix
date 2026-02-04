@@ -33,7 +33,7 @@ in
       cat > ${envFile} << 'EOF'
 LNBITS_ADMIN_UI=true
 LNBITS_HOST=0.0.0.0
-LNBITS_PORT=9000
+LNBITS_PORT=80
 EOF
       chmod 0640 ${envFile}
       chown root:root ${envFile}
@@ -71,6 +71,9 @@ EOF
 
       Restart = "on-failure";
       RestartSec = 2;
+
+      # Allow binding to privileged port 80
+      AmbientCapabilities = "CAP_NET_BIND_SERVICE";
 
       # Basic hardening options
       # Note: MemoryDenyWriteExecute is NOT enabled because pynostr (used by LNbits

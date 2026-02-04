@@ -60,8 +60,8 @@
     vim
   ];
 
-  # LNbits listens on 9000
-  networking.firewall.allowedTCPPorts = [ 9000 ];
+  # LNbits listens on 80
+  networking.firewall.allowedTCPPorts = [ 80 ];
 
   # Bring in LNbits service
   imports = [
