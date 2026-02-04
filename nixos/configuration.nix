@@ -26,6 +26,8 @@
     "consoleblank=0"
     "console=ttyAMA0,115200"  # Serial console (for UART debugging)
     "console=tty1"             # HDMI console (last = preferred/default)
+    "fbcon=map:0"              # Force framebuffer console on fb0
+    "vt.global_cursor_default=0" # Keep cursor visible
   ];
 
   # Enable getty (login prompt) on tty1
@@ -77,4 +79,11 @@
     };
     pi4 = { };
   };
+
+  # Enable VC4 graphics driver for HDMI output
+  # This prevents the console from switching to dummy device
+  hardware.graphics.enable = true;
+
+  # Ensure framebuffer console stays active
+  boot.kernelModules = [ "vc4" "bcm2835_dma" "i2c_bcm2835" ];
 }
