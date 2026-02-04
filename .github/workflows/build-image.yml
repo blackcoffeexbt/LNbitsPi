@@ -46,6 +46,12 @@ jobs:
           name: lnbits
         continue-on-error: true
 
+      - name: Use raspberry-pi-nix Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: raspberry-pi-nix
+        continue-on-error: true
+
       - name: Dry-run (should not build linux-rpi)
         run: |
           nix build .#nixosConfigurations.pi4.config.system.build.sdImage --dry-run 2>&1 | tee dryrun.txt
