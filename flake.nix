@@ -23,6 +23,7 @@
       specialArgs = { inherit lnbits; };
       modules = [
         raspberry-pi-nix.nixosModules.raspberry-pi
+        raspberry-pi-nix.nixosModules.sd-image
         ./nixos/configuration.nix
       ];
     };
