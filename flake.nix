@@ -6,7 +6,7 @@
 
     # Raspberry Pi firmware + SD image module
     # Pin to a tag you like; update later when needed.
-    raspberry-pi-nix.url = "github:nix-community/raspberry-pi-nix";
+    raspberry-pi-nix.url = "github:nix-community/raspberry-pi-nix/v0.4.1";
     raspberry-pi-nix.inputs.nixpkgs.follows = "nixpkgs";
 
     # LNbits flake input (you can pin to a tag/commit later)
