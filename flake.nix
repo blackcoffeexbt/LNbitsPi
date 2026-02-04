@@ -27,7 +27,7 @@
         ./nixos/configuration.nix
         # Override to use mainline kernel instead of raspberry-pi kernel
         {
-          boot.kernelPackages = nixpkgs.legacyPackages.${system}.linuxPackages_latest;
+          boot.kernelPackages = nixpkgs.lib.mkForce nixpkgs.legacyPackages.${system}.linuxPackages_latest;
         }
       ];
     };
