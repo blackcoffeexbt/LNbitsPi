@@ -12,16 +12,20 @@
     # LNbits flake input - pinned to v1.4.2 (latest stable)
     # To update: change the version tag and run: nix flake lock --update-input lnbits
     lnbits.url = "github:lnbits/lnbits/v1.4.2";
+
+    # Spark sidecar for L2 Lightning integration
+    spark-sidecar.url = "github:lnbits/spark_sidecar";
+    spark-sidecar.flake = false;  # Not a flake, just source
   };
 
-  outputs = { self, nixpkgs, raspberry-pi-nix, lnbits, ... }:
+  outputs = { self, nixpkgs, raspberry-pi-nix, lnbits, spark-sidecar, ... }:
   let
     system = "aarch64-linux";
   in
   {
     nixosConfigurations.pi4 = nixpkgs.lib.nixosSystem {
       inherit system;
-      specialArgs = { inherit lnbits; };
+      specialArgs = { inherit lnbits spark-sidecar; };
       modules = [
         raspberry-pi-nix.nixosModules.raspberry-pi
         raspberry-pi-nix.nixosModules.sd-image

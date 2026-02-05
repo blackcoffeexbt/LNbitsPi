@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - LNbitsPi Setup{% endblock %}
+
+{% block content %}
+<h2>Welcome to LNbitsPi!</h2>
+
+<p>This wizard will guide you through the initial setup of your LNbitsPi device.</p>
+
+<h3>Setup Steps:</h3>
+<ol class="steps">
+    <li>Generate or import a Spark wallet seed phrase (BIP39 mnemonic)</li>
+    <li>Set your SSH password for secure remote access</li>
+    <li>Complete setup and start LNbits</li>
+</ol>
+
+<div class="warning">
+    <strong>Important:</strong>
+    <p>The seed phrase you generate or import will control your Spark Lightning wallet. Write it down and store it safely. You will only see it once during this setup.</p>
+</div>
+
+<a href="{{ url_for('seed') }}" class="btn btn-primary btn-block">Begin Setup</a>
+{% endblock %}

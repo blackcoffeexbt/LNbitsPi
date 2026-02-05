@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Already Configured - LNbitsPi{% endblock %}
+
+{% block content %}
+<h2>System Already Configured</h2>
+
+<p>Your LNbitsPi has already been configured. The setup wizard is disabled.</p>
+
+<p>If you need to reconfigure your system, run the following command via SSH:</p>
+
+<div style="background: #f8f9fa; padding: 15px; border-radius: 6px; font-family: monospace; margin: 20px 0;">
+    sudo lnbitspi-reset
+</div>
+
+<p style="text-align: center; margin-top: 30px;">
+    <a href="/" class="btn btn-primary">Return to LNbits</a>
+</p>
+
+{% endblock %}

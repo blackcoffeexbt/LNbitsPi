@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Seed Setup - LNbitsPi{% endblock %}
+
+{% block content %}
+<h2>Step 1: Spark Wallet Seed</h2>
+
+{% if action == "choose" %}
+    <p>Choose how you want to set up your Spark wallet:</p>
+
+    <form method="POST" style="margin-top: 30px;">
+        <input type="hidden" name="action" value="generate">
+        <button type="submit" class="btn btn-primary btn-block">Generate New Seed Phrase</button>
+    </form>
+
+    <p style="text-align: center; margin: 20px 0; color: #999;">or</p>
+
+    <form method="POST">
+        <input type="hidden" name="action" value="import">
+        <div class="form-group">
+            <label for="mnemonic">Import Existing Seed Phrase:</label>
+            <textarea name="mnemonic" id="mnemonic" placeholder="Enter your 12-word BIP39 mnemonic here..."></textarea>
+            <small style="color: #666;">Enter 12 words separated by spaces</small>
+        </div>
+        <button type="submit" class="btn btn-secondary btn-block">Import Seed Phrase</button>
+    </form>
+
+{% elif action == "display" %}
+    <div class="warning">
+        <strong>CRITICAL: Save Your Seed Phrase</strong>
+        <p>Write down these 12 words in order and store them safely. This is the ONLY time you will see this phrase. Without it, you cannot recover your wallet.</p>
+    </div>
+
+    <div class="mnemonic-display">
+        {{ mnemonic }}
+    </div>
+
+    <form method="POST">
+        <input type="hidden" name="action" value="confirm">
+        <div class="checkbox-group">
+            <input type="checkbox" name="confirmed" id="confirmed" value="yes" required>
+            <label for="confirmed">I have written down and safely stored my seed phrase</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Continue</button>
+    </form>
+{% endif %}
+
+{% endblock %}

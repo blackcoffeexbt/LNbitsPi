@@ -32,8 +32,8 @@ in
     if [ ! -f ${envFile} ]; then
       cat > ${envFile} << 'EOF'
 LNBITS_ADMIN_UI=true
-LNBITS_HOST=0.0.0.0
-LNBITS_PORT=80
+LNBITS_HOST=127.0.0.1
+LNBITS_PORT=5000
 EOF
       chmod 0640 ${envFile}
       chown root:root ${envFile}
@@ -42,9 +42,14 @@ EOF
 
   systemd.services.lnbits = {
     description = "LNbits server";
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
+    after = [ "network-online.target" "spark-sidecar.service" ];
+    wants = [ "network-online.target" "spark-sidecar.service" ];
     wantedBy = [ "multi-user.target" ];
+
+    # Only start if the system has been configured
+    unitConfig = {
+      ConditionPathExists = "/var/lib/lnbits/.configured";
+    };
 
     serviceConfig = {
       Type = "simple";
@@ -71,9 +76,6 @@ EOF
 
       Restart = "on-failure";
       RestartSec = 2;
-
-      # Allow binding to privileged port 80
-      AmbientCapabilities = "CAP_NET_BIND_SERVICE";
 
       # Basic hardening options
       # Note: MemoryDenyWriteExecute is NOT enabled because pynostr (used by LNbits

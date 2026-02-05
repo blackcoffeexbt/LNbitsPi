@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Complete - LNbitsPi{% endblock %}
+
+{% block content %}
+<div class="success-icon">✓</div>
+
+<h2 style="text-align: center;">Setup Complete!</h2>
+
+<p style="text-align: center;">Your LNbitsPi is now configured and LNbits is starting up.</p>
+
+<div class="warning">
+    <strong>Next Steps:</strong>
+    <ol style="margin-top: 10px; padding-left: 20px;">
+        <li>Wait 10-15 seconds for services to start</li>
+        <li>Refresh this page or click the button below</li>
+        <li>LNbits will open and you can begin using it</li>
+    </ol>
+</div>
+
+<p style="text-align: center; margin-top: 30px;">
+    <a href="/" class="btn btn-success btn-block">Open LNbits</a>
+</p>
+
+<p style="text-align: center; margin-top: 20px; color: #666; font-size: 14px;">
+    This configuration wizard is now disabled. To reconfigure, use: <code>sudo lnbitspi-reset</code>
+</p>
+
+{% endblock %}

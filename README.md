@@ -5,12 +5,14 @@ A pre-configured, bootable NixOS SD card image for Raspberry Pi 4 that runs [LNb
 ## What's included
 
 - **NixOS 24.11** (latest stable)
-- **LNbits v1.4.2** running as a systemd service on port 9000
+- **LNbits v1.4.2** running as a systemd service on port 80
+- **Spark L2 Lightning sidecar** for advanced wallet features
+- **First-run configuration wizard** for easy setup
 - **SSH enabled** for remote access
 - **Mainline Linux kernel** (cached, no compilation needed)
 - **Raspberry Pi 4 optimizations** (64-bit, UART enabled)
-- **Firewall configured** (port 9000 open for LNbits)
-- **Default user:** `lnbitsadmin` / password: `lnbits` (⚠️ change on first boot!)
+- **nginx reverse proxy** for secure internal routing
+- **Firewall configured** (port 80 open)
 
 ### SD Card Partition Layout
 
@@ -21,15 +23,16 @@ After flashing, your SD card will have two partitions:
 
 You can customize the firmware partition label by setting `raspberry-pi-nix.firmware-partition-label` in `nixos/configuration.nix`.
 
-### LNbits Directory Structure
+### Directory Structure
 
-Once running, LNbits uses the following directories on your Pi:
+Once configured, the system uses the following directories:
 
-- **`/var/lib/lnbits`** - Main data directory (database, uploaded files, etc.)
+- **`/var/lib/lnbits`** - LNbits data directory (database, uploaded files, etc.)
 - **`/var/lib/lnbits-extensions`** - Extensions/plugins directory
-- **`/etc/lnbits/lnbits.env`** - Configuration file (environment variables)
+- **`/var/lib/spark-sidecar`** - Spark wallet data and mnemonic
+- **`/etc/lnbits/lnbits.env`** - LNbits configuration file
 
-All directories are owned by the `lnbits` system user and persist across reboots.
+All directories are owned by their respective system users and persist across reboots.
 
 ## Quick start: Download and flash
 
@@ -119,34 +122,82 @@ zstd -d nixos-sd-image-*.img.zst
 2. Connect ethernet cable (or configure WiFi later)
 3. Power on the Pi
 4. **If you have a monitor connected:**
-   - You'll see boot messages
-   - Screen will go **black after "Reached target multi-user system"** - **this is normal!**
-   - The system is running and waiting for SSH (it's a headless system with no GUI)
+   - You'll see boot messages and a login prompt
+   - The system displays a welcome message with setup instructions
 5. Wait 2-3 minutes for first boot to complete
 6. Find the Pi's IP address:
-   - Check your router's DHCP client list for hostname `lnbits-pi4`, or
-   - Try connecting via mDNS: `ssh lnbitsadmin@lnbits-pi4.local`
+   - Check your router's DHCP client list for hostname `lnbits`
+   - Try connecting via mDNS: `ssh lnbitsadmin@lnbits.local`
    - Use a network scanner like `nmap` or `angry-ip-scanner`
-   - Or connect a keyboard and press a key to see if a login prompt appears
+   - Or check the login screen if you have a monitor connected
 
-### Step 4: Access LNbits
+### Step 4: Complete the setup wizard
+
+On first boot, LNbitsPi presents a configuration wizard at `http://<pi-ip-address>/`
+
+**Open your browser:**
+```
+http://<pi-ip-address>/
+```
+
+**Follow the wizard steps:**
+
+1. **Generate or import Spark wallet seed**
+   - Click "Generate New Seed Phrase" for a new 12-word BIP39 mnemonic
+   - OR paste an existing seed phrase to import
+   - ⚠️ **CRITICAL:** Write down your seed phrase and store it safely
+   - You will only see it once during this setup
+   - Check the box confirming you've saved it
+
+2. **Set SSH password**
+   - Create a password for the `lnbitsadmin` user
+   - Minimum 8 characters
+   - You'll use this to SSH into your Pi
+
+3. **Complete setup**
+   - The wizard will configure your system
+   - Wait 10-15 seconds for services to start
+   - LNbits will open automatically
+
+### Step 5: Access LNbits
+
+After completing the wizard, LNbits is available at the same URL:
+
+```
+http://<pi-ip-address>/
+```
+
+**SSH access:**
+```bash
+ssh lnbitsadmin@<pi-ip-address>
+# Use the password you set in the wizard
+```
+
+That's it! Your LNbits node with Spark L2 Lightning is now running.
+
+## Resetting the configuration
+
+If you need to re-run the setup wizard (for example, if you skipped saving the seed phrase):
 
 **SSH into your Pi:**
 ```bash
 ssh lnbitsadmin@<pi-ip-address>
-# Default password: lnbits
 ```
 
-⚠️ **Important:** Change the default password immediately!
+**Run the reset command:**
 ```bash
-passwd
+sudo lnbitspi-reset
 ```
 
-**Access LNbits web interface:**
+This will:
+- Stop LNbits and Spark sidecar services
+- Remove the configuration marker
+- Optionally delete the Spark mnemonic (you'll be prompted)
+- Re-enable the setup wizard
 
-Open your browser and go to: `http://<pi-ip-address>:9000`
+After reset, the wizard will be available again at `http://<pi-ip-address>/`
 
-That's it! Your LNbits node is now running on NixOS.
+⚠️ **Note:** This does NOT delete your LNbits database or user data.
 
 # Build from source
 
@@ -322,17 +373,13 @@ sudo dd if=image.img of=/dev/sdX bs=4M status=progress conv=fsync
 After flashing and booting the Raspberry Pi 4:
 
 1. The Pi will automatically connect via DHCP
-2. SSH is enabled by default
-3. Login: `lnbitsadmin` / password: `lnbits`
-4. LNbits will be running on port 9000
-5. **Change the default password immediately after first login!**
+2. Navigate to `http://<pi-ip-address>/` to access the setup wizard
+3. Complete the wizard to:
+   - Generate/import your Spark wallet seed
+   - Set SSH password for `lnbitsadmin` user
+   - Configure and start LNbits
 
-```bash
-ssh lnbitsadmin@<pi-ip-address>
-passwd  # Change your password
-```
-
-Access LNbits at: `http://<pi-ip-address>:9000`
+After setup is complete, access LNbits at: `http://<pi-ip-address>/`
 
 ## Troubleshooting
 
@@ -399,60 +446,43 @@ Access LNbits at: `http://<pi-ip-address>:9000`
 - Check if port 22 is open: `nmap -p 22 <ip>`
 - Wait a bit longer - first boot takes time
 
-**Can't access LNbits web interface:**
-- Verify LNbits is running: `ssh` into the Pi and run `systemctl status lnbits`
-- Check if port 9000 is open: `nmap -p 9000 <ip>`
+**Can't access web interface (wizard or LNbits):**
+- Verify nginx is running: `ssh` into the Pi and run `systemctl status nginx`
+- Check if port 80 is open: `nmap -p 80 <ip>`
 - Try accessing from a different device on the same network
-- Check firewall rules: `sudo iptables -L -n | grep 9000`
+- Check firewall rules: `sudo iptables -L -n | grep 80`
+- If configured, check LNbits is running: `systemctl status lnbits`
+- If not configured, check configurator is running: `systemctl status lnbitspi-configurator`
 
-**LNbits service crashes with MemoryError:**
-If you see `MemoryError: Cannot allocate write+execute memory for ffi.callback()` in the logs (`journalctl -u lnbits`):
-- This was fixed in the latest version by removing the `MemoryDenyWriteExecute` systemd hardening option
-- The pynostr library (used for Nostr Wallet Connect) requires write+execute memory for cryptographic operations
-- If you built an older image, rebuild with the latest code or manually edit `/etc/nixos/lnbits-service.nix` on the Pi and remove the `MemoryDenyWriteExecute = true;` line from the lnbits service, then run `sudo nixos-rebuild switch`
+**Wizard doesn't appear on first boot:**
+- Wait a few minutes for the configurator service to start
+- Check if configurator is running: `ssh` into Pi and run `systemctl status lnbitspi-configurator`
+- Check nginx is routing correctly: `curl -I http://localhost/`
+- If already configured, the marker file exists: `ls /var/lib/lnbits/.configured`
+- To re-run wizard, use: `sudo lnbitspi-reset`
 
-**LNbits service fails with "Failed to load environment files: No such file or directory":**
-If you see this error, the `/etc/lnbits/lnbits.env` file wasn't created during system activation. Create it manually:
-```bash
-sudo mkdir -p /etc/lnbits
-sudo tee /etc/lnbits/lnbits.env > /dev/null << 'EOF'
-LNBITS_ADMIN_UI=true
-LNBITS_HOST=0.0.0.0
-LNBITS_PORT=9000
-EOF
-sudo chmod 0640 /etc/lnbits/lnbits.env
-sudo systemctl restart lnbits
-```
-This is fixed in the latest version of the configuration.
+**Can't set SSH password in wizard:**
+- Ensure you're entering at least 8 characters
+- Check passwords match exactly
+- If it fails, check logs: `journalctl -u lnbitspi-configurator`
 
-**LNbits service fails with "is not a valid integer" error:**
-If you see `Error: invalid value for '--port': '${LNBITS_PORT}' is not a valid integer` in the logs:
-- The `/etc/lnbits/lnbits.env` file is missing required variables
-- Fix by running these commands on the Pi:
-  ```bash
-  echo "LNBITS_HOST=0.0.0.0" | sudo tee -a /etc/lnbits/lnbits.env
-  echo "LNBITS_PORT=9000" | sudo tee -a /etc/lnbits/lnbits.env
-  sudo systemctl restart lnbits
-  ```
-- Or rebuild with the latest code which fixes the env file creation
+**Services don't start after wizard:**
+- Wait 10-15 seconds for services to start
+- Check spark-sidecar: `systemctl status spark-sidecar`
+- Check lnbits: `systemctl status lnbits`
+- Check logs: `journalctl -u spark-sidecar` and `journalctl -u lnbits`
+- Verify marker file exists: `ls /var/lib/lnbits/.configured`
 
-**LNbits service fails with "Directory 'lnbits/static' does not exist" error:**
-If you see `RuntimeError: Directory 'lnbits/static' does not exist`:
-- This happens if `WorkingDirectory` is set in the systemd service
-- LNbits needs to run from its installation directory to find static files
-- Fix: Remove the `WorkingDirectory` line from the lnbits service config
-- The environment variables `LNBITS_DATA_FOLDER` and `LNBITS_EXTENSIONS_PATH` ensure data is written to the correct locations
-- Rebuild with the latest code which has this fixed
+**Forgot to save seed phrase:**
+- Run `sudo lnbitspi-reset` to restart the wizard
+- Choose NOT to delete the mnemonic when prompted
+- In the wizard, import your existing mnemonic instead of generating new
 
-**LNbits service fails with "Read-only file system" error:**
-If you see `OSError: [Errno 30] Read-only file system` when trying to create directories:
-- Make sure `LNBITS_DATA_FOLDER` and `LNBITS_EXTENSIONS_PATH` are set in the environment
-- Ensure both directories exist and are owned by the lnbits user:
-  ```bash
-  sudo mkdir -p /var/lib/lnbits /var/lib/lnbits-extensions
-  sudo chown lnbits:lnbits /var/lib/lnbits /var/lib/lnbits-extensions
-  ```
-- Check that both paths are in `ReadWritePaths` in the systemd service config
+**LNbits can't connect to Spark sidecar:**
+- Check Spark is running: `systemctl status spark-sidecar`
+- Check Spark logs: `journalctl -u spark-sidecar`
+- Verify mnemonic file exists: `sudo ls -l /var/lib/spark-sidecar/mnemonic`
+- Check LNbits config has Spark URL: `cat /etc/lnbits/lnbits.env | grep SPARK`
 
 ### Build Issues (For developers)
 

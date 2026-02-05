@@ -58,15 +58,50 @@
     curl
     htop
     vim
+    (pkgs.callPackage ./reset-configurator.nix { })
   ];
 
-  # LNbits listens on 80
+  # Display first-boot instructions on login
+  environment.etc."motd".text = ''
+    ╔═══════════════════════════════════════════════════════════╗
+    ║                    Welcome to LNbitsPi                    ║
+    ╚═══════════════════════════════════════════════════════════╝
+
+    To configure your device, open a web browser and navigate to:
+      http://<this-device-ip>/
+
+    Not configured yet? The setup wizard will guide you through:
+      • Generating/importing your Spark wallet seed phrase
+      • Setting your SSH password
+      • Launching LNbits
+
+    Already configured? LNbits is available at the same URL.
+
+    To find this device's IP address, run: ip addr show
+    To reset configuration, run: sudo lnbitspi-reset
+  '';
+
+  # External port 80 (nginx reverse proxy)
+  # nginx routes to configurator (pre-setup) or LNbits (post-setup)
   networking.firewall.allowedTCPPorts = [ 80 ];
 
-  # Bring in LNbits service
+  # Import service modules
   imports = [
     ./lnbits-service.nix
+    ./spark-sidecar-service.nix
+    ./configurator-service.nix
+    ./nginx-proxy.nix
   ];
+
+  # Auto-migration for existing LNbits installations
+  # If database exists but no marker file, create marker to skip wizard
+  system.activationScripts.lnbits-migration = ''
+    if [ -f /var/lib/lnbits/database.sqlite ] && [ ! -f /var/lib/lnbits/.configured ]; then
+      echo "Existing LNbits installation detected, auto-migrating..."
+      touch /var/lib/lnbits/.configured
+      echo "Migration complete. Wizard will be skipped."
+    fi
+  '';
 
   # Pi4: 64-bit + UART enabled (optional but handy)
   hardware.raspberry-pi.config = {
