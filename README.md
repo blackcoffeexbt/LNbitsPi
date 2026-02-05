@@ -182,13 +182,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 Install Nix (multi-user daemon mode):
 
 ```bash
-sh <(curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix) --daemon --yes
-```
-
-Or use the official installer:
-
-```bash
-sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon --yes
+sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
 ```
 
 Enable experimental features (flakes and nix-command):
