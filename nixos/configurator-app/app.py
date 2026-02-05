@@ -15,11 +15,19 @@ from mnemonic import Mnemonic
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# Paths
-MARKER_FILE = Path("/var/lib/lnbits/.configured")
-MNEMONIC_FILE = Path("/var/lib/spark-sidecar/mnemonic")
-ENV_FILE = Path("/etc/lnbits/lnbits.env")
-SSH_USER = "lnbitsadmin"
+# Development mode - use /tmp paths instead of system paths
+DEV_MODE = os.environ.get("DEV_MODE", "true") == "true"
+
+if DEV_MODE:
+    MARKER_FILE = Path("/tmp/lnbitspi-test/lnbits/.configured")
+    MNEMONIC_FILE = Path("/tmp/lnbitspi-test/spark-sidecar/mnemonic")
+    ENV_FILE = Path("/tmp/lnbitspi-test/lnbits-config/lnbits.env")
+    SSH_USER = os.environ.get("USER")  # Use current user instead of lnbitsadmin
+else:
+    MARKER_FILE = Path("/var/lib/lnbits/.configured")
+    MNEMONIC_FILE = Path("/var/lib/spark-sidecar/mnemonic")
+    ENV_FILE = Path("/etc/lnbits/lnbits.env")
+    SSH_USER = "lnbitsadmin"
 
 # In-memory state for wizard (cleared after completion)
 wizard_state = {}
@@ -118,12 +126,16 @@ def password():
         # Set password using chpasswd (secure, no shell exposure)
         try:
             chpasswd_input = f"{SSH_USER}:{password1}"
-            subprocess.run(
-                ["chpasswd"],
-                input=chpasswd_input.encode(),
-                check=True,
-                capture_output=True
-            )
+            if DEV_MODE:
+                print(f"[DEV MODE] Would set password for user: {SSH_USER}")
+                # In dev mode, just log it instead of actually setting
+            else:
+                subprocess.run(
+                    ["chpasswd"],
+                    input=chpasswd_input.encode(),
+                    check=True,
+                    capture_output=True
+                )
             wizard_state["password_set"] = True
             return redirect(url_for("complete"))
         except subprocess.CalledProcessError as e:
@@ -171,8 +183,11 @@ def complete():
         wizard_state.clear()
 
         # 6. Start services (systemd will handle conditions)
-        subprocess.run(["systemctl", "start", "spark-sidecar.service"], check=False)
-        subprocess.run(["systemctl", "start", "lnbits.service"], check=False)
+        if DEV_MODE:
+            print("[DEV MODE] Would start services: spark-sidecar, lnbits")
+        else:
+            subprocess.run(["systemctl", "start", "spark-sidecar.service"], check=False)
+            subprocess.run(["systemctl", "start", "lnbits.service"], check=False)
 
         return render_template("complete.html")
 

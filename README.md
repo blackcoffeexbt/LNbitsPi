@@ -609,6 +609,25 @@ nix build .#sdImage -L      # Build new image
     └── build-image.yml          # GitHub Actions CI/CD
 ```
 
+# Configuration App
+
+The configuration app is a web application that runs on first boot to guide users through the initial setup process. It handles:
+- Generating or importing the Spark wallet seed phrase
+- Setting the SSH password for the `lnbitsadmin` user
+- Starting the LNbits and Spark services after configuration is complete.
+
+To run the app locally for development:
+```bash
+cd nixos/configurator-app
+python3 -m venv venv
+source venv/bin/activate
+pip install mnemonic
+export DEV_MODE=true
+python3 app.py
+```
+
 ## License
 
 This project configuration is provided as-is for educational and deployment purposes. LNbits itself is licensed under the MIT License.
+
+
