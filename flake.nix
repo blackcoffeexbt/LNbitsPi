@@ -31,10 +31,6 @@
         raspberry-pi-nix.nixosModules.raspberry-pi
         raspberry-pi-nix.nixosModules.sd-image
         ./nixos/configuration.nix
-        # Override to use mainline kernel instead of raspberry-pi kernel
-        {
-          boot.kernelPackages = nixpkgs.lib.mkForce nixpkgs.legacyPackages.${system}.linuxPackages_latest;
-        }
       ];
     };
 
@@ -46,10 +42,6 @@
         raspberry-pi-nix.nixosModules.raspberry-pi
         raspberry-pi-nix.nixosModules.sd-image
         ./nixos/configuration.nix
-        # Override to use mainline kernel instead of raspberry-pi kernel
-        {
-          boot.kernelPackages = nixpkgs.lib.mkForce nixpkgs.legacyPackages.${system}.linuxPackages_latest;
-        }
         # Disable compression for faster testing
         {
           sdImage.compressImage = false;
