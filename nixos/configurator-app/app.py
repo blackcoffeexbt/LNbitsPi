@@ -8,6 +8,8 @@ import os
 import sys
 import subprocess
 import grp
+import threading
+import time
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, flash
 from mnemonic import Mnemonic
@@ -175,19 +177,23 @@ def complete():
         # 3. Update LNbits env file with Spark configuration
         update_lnbits_env()
 
-        # 4. Create marker file
-        MARKER_FILE.parent.mkdir(parents=True, exist_ok=True)
-        MARKER_FILE.touch(mode=0o644)
-
-        # 5. Clear wizard state (security)
+        # 4. Clear wizard state (security)
         wizard_state.clear()
 
-        # 6. Start services (systemd will handle conditions)
-        if DEV_MODE:
-            print("[DEV MODE] Would start services: spark-sidecar, lnbits")
-        else:
-            subprocess.run(["systemctl", "start", "spark-sidecar.service"], check=False)
-            subprocess.run(["systemctl", "start", "lnbits.service"], check=False)
+        # 5. Delay marker creation and service start so the complete page
+        #    and its assets are served by the configurator before nginx
+        #    switches routing to LNbits
+        def finalize():
+            time.sleep(5)
+            MARKER_FILE.parent.mkdir(parents=True, exist_ok=True)
+            MARKER_FILE.touch(mode=0o644)
+            if DEV_MODE:
+                print("[DEV MODE] Would start services: spark-sidecar, lnbits")
+            else:
+                subprocess.run(["systemctl", "start", "spark-sidecar.service"], check=False)
+                subprocess.run(["systemctl", "start", "lnbits.service"], check=False)
+
+        threading.Thread(target=finalize, daemon=True).start()
 
         return render_template("complete.html")
 
