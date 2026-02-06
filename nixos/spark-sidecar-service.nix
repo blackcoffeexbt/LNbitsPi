@@ -39,8 +39,8 @@ in
         "SPARK_MNEMONIC_FILE=${mnemonicFile}"
         "SPARK_SIDECAR_PORT=8765"
         "SPARK_SIDECAR_HOST=127.0.0.1"
-        "SPARK_NETWORK=mainnet"
-        "NODE_ENV=production"
+        "SPARK_NETWORK=MAINNET"
+        "SPARK_PAY_WAIT_MS=20000"
       ];
 
       ExecStart = "${sparkPkg}/bin/spark-sidecar";
