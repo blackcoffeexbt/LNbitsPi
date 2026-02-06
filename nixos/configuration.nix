@@ -3,6 +3,10 @@
 {
   system.stateVersion = "24.11";
 
+  # Disable automatic partition resize on first boot
+  # (causes boot failure on subsequent boots)
+  sdImage.expandOnBoot = false;
+
   # Specify the Raspberry Pi board (required by raspberry-pi-nix)
   raspberry-pi-nix.board = "bcm2711"; # Raspberry Pi 4
 
