@@ -16,7 +16,7 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 # Development mode - use /tmp paths instead of system paths
-DEV_MODE = os.environ.get("DEV_MODE", "true") == "true"
+DEV_MODE = os.environ.get("DEV_MODE", "false") == "true"
 
 if DEV_MODE:
     MARKER_FILE = Path("/tmp/lnbitspi-test/lnbits/.configured")
