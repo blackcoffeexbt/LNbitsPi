@@ -23,6 +23,7 @@
     system = "aarch64-linux";
   in
   {
+    # Compressed SD image (default, for releases)
     nixosConfigurations.pi4 = nixpkgs.lib.nixosSystem {
       inherit system;
       specialArgs = { inherit lnbits spark-sidecar; };
@@ -37,11 +38,47 @@
       ];
     };
 
-    # Expose the SD image as a package for x86_64-linux
-    packages.x86_64-linux.sdImage =
-      self.nixosConfigurations.pi4.config.system.build.sdImage;
+    # Uncompressed SD image (for faster local testing)
+    nixosConfigurations.pi4-uncompressed = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = { inherit lnbits spark-sidecar; };
+      modules = [
+        raspberry-pi-nix.nixosModules.raspberry-pi
+        raspberry-pi-nix.nixosModules.sd-image
+        ./nixos/configuration.nix
+        # Override to use mainline kernel instead of raspberry-pi kernel
+        {
+          boot.kernelPackages = nixpkgs.lib.mkForce nixpkgs.legacyPackages.${system}.linuxPackages_latest;
+        }
+        # Disable compression for faster testing
+        {
+          sdImage.compressImage = false;
+        }
+      ];
+    };
 
-    packages.x86_64-linux.default =
-      self.packages.x86_64-linux.sdImage;
+    # Expose packages for x86_64-linux (cross-compilation)
+    packages.x86_64-linux = {
+      # Compressed SD image (default, for releases)
+      sdImage = self.nixosConfigurations.pi4.config.system.build.sdImage;
+
+      # Uncompressed SD image (for faster local testing)
+      sdImageUncompressed = self.nixosConfigurations.pi4-uncompressed.config.system.build.sdImage;
+
+      # Default to compressed
+      default = self.nixosConfigurations.pi4.config.system.build.sdImage;
+    };
+
+    # Expose packages for aarch64-linux (native builds)
+    packages.aarch64-linux = {
+      # Compressed SD image (default, for releases)
+      sdImage = self.nixosConfigurations.pi4.config.system.build.sdImage;
+
+      # Uncompressed SD image (for faster local testing)
+      sdImageUncompressed = self.nixosConfigurations.pi4-uncompressed.config.system.build.sdImage;
+
+      # Default to compressed
+      default = self.nixosConfigurations.pi4.config.system.build.sdImage;
+    };
   };
 }

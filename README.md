@@ -203,6 +203,17 @@ After reset, the wizard will be available again at `http://<pi-ip-address>/`
 
 To build the image yourself, follow these instructions for Debian/Ubuntu systems.
 
+## Build Options
+
+You can build two variants of the SD image:
+
+| Build Type | Command | Output | Use Case |
+|------------|---------|--------|----------|
+| **Compressed** (default) | `nix build .#sdImage -L` | `*.img.zst` | For distribution, GitHub releases (smaller file size) |
+| **Uncompressed** | `nix build .#sdImageUncompressed -L` | `*.img` | For local testing (faster build, faster flashing) |
+
+**Recommendation:** Use uncompressed builds during development for faster iteration, then build compressed for final release.
+
 ## **0) Prep a Debian / Ubuntu system**
 
 Update and install required packages:
@@ -316,10 +327,16 @@ cd lnbitspi
 Build the SD image:
 
 ```bash
+# Compressed image (default, smaller for distribution)
 nix build .#sdImage -L
+
+# OR: Uncompressed image (faster for local testing, skips compression)
+nix build .#sdImageUncompressed -L
 ```
 
 The `-L` flag shows build logs in real-time. The build may take 30-60 minutes depending on your system and what needs to be built.
+
+**Note:** The uncompressed build is significantly faster because it skips the zstd compression step (saves ~5-10 minutes). Use it for local testing, then build the compressed version for distribution.
 
 Check the result:
 
@@ -327,14 +344,22 @@ Check the result:
 ls -lah result/sd-image/
 ```
 
-You should see a `*.img.zst` file.
+You should see:
+- **Compressed build:** `*.img.zst` file
+- **Uncompressed build:** `*.img` file
 
 Copy the image to a distribution directory:
 
 ```bash
 mkdir -p dist
+
+# For compressed images
 cp -v result/sd-image/*.img.zst dist/
 sha256sum dist/*.img.zst > dist/SHA256SUMS.txt
+
+# For uncompressed images (testing)
+cp -v result/sd-image/*.img dist/
+sha256sum dist/*.img > dist/SHA256SUMS.txt
 ```
 
 ## **5) Verify the image**
@@ -355,11 +380,15 @@ Flash using **Raspberry Pi Imager** (recommended) or use command-line tools:
 **On Linux/macOS:**
 
 ```bash
+# For COMPRESSED images (.img.zst):
 # Decompress and write in one command (replace /dev/sdX with your SD card device)
 zstd -dc dist/*.img.zst | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync
+
+# For UNCOMPRESSED images (.img) - faster, no decompression needed:
+sudo dd if=dist/*.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-**Or decompress first, then write:**
+**Or decompress first, then write (compressed only):**
 
 ```bash
 zstd -d dist/*.img.zst -o image.img
