@@ -211,8 +211,9 @@ You can build two variants of the SD image:
 |------------|---------|--------|----------|
 | **Compressed** (default) | `nix build .#sdImage -L` | `*.img.zst` | For distribution, GitHub releases (smaller file size) |
 | **Uncompressed** | `nix build .#sdImageUncompressed -L` | `*.img` | For local testing (faster build, faster flashing) |
+| **Quick Test** | `./build-test.sh` | `*.img` (copied to repo root) | Fastest way to build and prepare for flashing |
 
-**Recommendation:** Use uncompressed builds during development for faster iteration, then build compressed for final release.
+**Recommendation:** Use `./build-test.sh` during development for fastest iteration. It builds uncompressed and copies the image to the repo root for easy access.
 
 ## **0) Prep a Debian / Ubuntu system**
 
@@ -327,16 +328,21 @@ cd lnbitspi
 Build the SD image:
 
 ```bash
+# Quick test build (recommended for development)
+# Builds uncompressed and copies to repo root
+./build-test.sh
+
+# OR: Manual builds
 # Compressed image (default, smaller for distribution)
 nix build .#sdImage -L
 
-# OR: Uncompressed image (faster for local testing, skips compression)
+# Uncompressed image (faster for local testing, skips compression)
 nix build .#sdImageUncompressed -L
 ```
 
 The `-L` flag shows build logs in real-time. The build may take 30-60 minutes depending on your system and what needs to be built.
 
-**Note:** The uncompressed build is significantly faster because it skips the zstd compression step (saves ~5-10 minutes). Use it for local testing, then build the compressed version for distribution.
+**Note:** The uncompressed build is significantly faster because it skips the zstd compression step (saves ~5-10 minutes). The `build-test.sh` script automatically copies the image to the repo root for easy flashing.
 
 Check the result:
 
@@ -345,20 +351,21 @@ ls -lah result/sd-image/
 ```
 
 You should see:
-- **Compressed build:** `*.img.zst` file
-- **Uncompressed build:** `*.img` file
+- **Compressed build:** `*.img.zst` file in `result/sd-image/`
+- **Uncompressed build:** `*.img` file in `result/sd-image/`
+- **Quick test build:** `*.img` file in repo root (ready to flash)
 
 Copy the image to a distribution directory:
 
 ```bash
 mkdir -p dist
 
-# For compressed images
+# For compressed images (releases)
 cp -v result/sd-image/*.img.zst dist/
 sha256sum dist/*.img.zst > dist/SHA256SUMS.txt
 
-# For uncompressed images (testing)
-cp -v result/sd-image/*.img dist/
+# For uncompressed images (if using build-test.sh, already in repo root)
+cp -v *.img dist/
 sha256sum dist/*.img > dist/SHA256SUMS.txt
 ```
 
