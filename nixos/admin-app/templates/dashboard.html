@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+
+    {# ── Header ── #}
+    <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-3">
+            <img src="{{ url_for('static', filename='lnbits-logo.svg') }}" alt="LNbits" class="h-6 opacity-90">
+            <span class="text-ln-muted font-mono text-xs uppercase tracking-widest">Box</span>
+        </div>
+        <a href="{{ url_for('logout') }}"
+           class="text-ln-muted hover:text-ln-pink font-mono text-xs uppercase tracking-wider transition-colors">
+            Sign Out
+        </a>
+    </div>
+
+    {# ── Metric Cards ── #}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-2">Balance</div>
+            <div class="text-2xl sm:text-3xl font-display font-bold text-ln-text" id="stat-balance">--</div>
+            <div class="text-ln-muted text-xs font-mono mt-1">sats</div>
+        </div>
+
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-2">Uptime</div>
+            <div class="text-2xl sm:text-3xl font-display font-bold text-ln-text" id="stat-uptime">--</div>
+        </div>
+
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-2">CPU Temp</div>
+            <div class="text-2xl sm:text-3xl font-display font-bold" id="stat-temp">--</div>
+            <div class="text-ln-muted text-xs font-mono mt-1" id="stat-temp-unit">&deg;C</div>
+        </div>
+
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-2">Disk</div>
+            <div class="text-2xl sm:text-3xl font-display font-bold text-ln-text" id="stat-disk">--</div>
+            <div class="w-full bg-ln-surface rounded-full h-1.5 mt-2">
+                <div class="bg-ln-pink rounded-full h-1.5 transition-all duration-500" id="stat-disk-bar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Charts ── #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-6">
+
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-3">CPU Usage</div>
+            <div class="h-48">
+                <canvas id="chart-cpu"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-3">Memory Usage</div>
+            <div class="h-48">
+                <canvas id="chart-ram"></canvas>
+            </div>
+        </div>
+    </div>
+
+    {# ── Services + Actions ── #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+
+        {# Services #}
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-4">Services</div>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2.5 h-2.5 rounded-full" id="svc-lnbits-dot"></div>
+                        <span class="font-mono text-sm">lnbits</span>
+                        <span class="text-ln-muted font-mono text-xs" id="svc-lnbits-status">--</span>
+                    </div>
+                    <button onclick="restartService('lnbits')"
+                            class="text-ln-muted hover:text-ln-pink text-xs font-mono uppercase tracking-wider transition-colors px-3 py-1 border border-ln-border rounded-lg hover:border-ln-pink/30">
+                        Restart
+                    </button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2.5 h-2.5 rounded-full" id="svc-spark-sidecar-dot"></div>
+                        <span class="font-mono text-sm">spark-sidecar</span>
+                        <span class="text-ln-muted font-mono text-xs" id="svc-spark-sidecar-status">--</span>
+                    </div>
+                    <button onclick="restartService('spark-sidecar')"
+                            class="text-ln-muted hover:text-ln-pink text-xs font-mono uppercase tracking-wider transition-colors px-3 py-1 border border-ln-border rounded-lg hover:border-ln-pink/30">
+                        Restart
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {# System Actions #}
+        <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
+            <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-4">System</div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="confirmAction('reboot', 'Reboot the Pi?')"
+                        class="bg-ln-surface hover:bg-ln-card-hover border border-ln-border hover:border-amber-500/30 text-ln-text font-mono text-sm py-3 px-4 rounded-lg transition-all duration-200">
+                    Reboot
+                </button>
+                <button onclick="confirmAction('shutdown', 'Shut down the Pi?')"
+                        class="bg-ln-surface hover:bg-ln-card-hover border border-ln-border hover:border-red-500/30 text-ln-text font-mono text-sm py-3 px-4 rounded-lg transition-all duration-200">
+                    Shutdown
+                </button>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                <span class="text-ln-muted text-xs font-mono">RAM: <span id="stat-ram-detail">--</span></span>
+            </div>
+        </div>
+    </div>
+
+    {# ── Footer ── #}
+    <div class="mt-8 text-center">
+        <p class="text-ln-muted text-xs font-mono tracking-wider uppercase">
+            LNbitsBox &middot; Powered by LNbits &amp; Spark
+        </p>
+    </div>
+</div>
+
+{# ── Confirm Modal ── #}
+<div id="confirm-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-ln-card border border-ln-border rounded-2xl p-6 max-w-sm w-full glow-pink">
+        <p class="text-lg font-display font-semibold mb-2" id="confirm-title">Are you sure?</p>
+        <p class="text-ln-muted text-sm font-mono mb-6" id="confirm-message"></p>
+        <div class="flex gap-3">
+            <button onclick="closeModal()"
+                    class="flex-1 bg-ln-surface border border-ln-border text-ln-text font-mono text-sm py-2.5 rounded-lg hover:bg-ln-card-hover transition-colors">
+                Cancel
+            </button>
+            <button id="confirm-btn"
+                    class="flex-1 bg-ln-pink hover:bg-ln-pink-dim text-white font-mono text-sm py-2.5 rounded-lg transition-colors">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Chart Setup ────────────────────────────────────────────────
+const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: { legend: { display: false } },
+    scales: {
+        x: {
+            display: false,
+        },
+        y: {
+            min: 0, max: 100,
+            grid: { color: 'rgba(42,42,58,0.5)' },
+            ticks: {
+                color: '#7a7a8e',
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: v => v + '%',
+            },
+        },
+    },
+    elements: {
+        point: { radius: 0 },
+        line: { tension: 0.3, borderWidth: 2 },
+    },
+};
+
+const cpuChart = new Chart(document.getElementById('chart-cpu'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            data: [],
+            borderColor: '#FF1EE6',
+            backgroundColor: 'rgba(255,30,230,0.08)',
+            fill: true,
+        }],
+    },
+    options: { ...chartOpts },
+});
+
+const ramChart = new Chart(document.getElementById('chart-ram'), {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            data: [],
+            borderColor: '#22d3ee',
+            backgroundColor: 'rgba(34,211,238,0.08)',
+            fill: true,
+        }],
+    },
+    options: { ...chartOpts },
+});
+
+// ── Stats Polling ──────────────────────────────────────────────
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+}
+
+function tempColor(temp) {
+    if (temp === null) return 'text-ln-muted';
+    if (temp < 55) return 'text-emerald-400';
+    if (temp < 70) return 'text-amber-400';
+    return 'text-red-400';
+}
+
+function svcColor(status) {
+    return status === 'active' ? 'bg-emerald-400' : 'bg-red-400';
+}
+
+async function fetchStats() {
+    try {
+        const resp = await fetch('/box/api/stats');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const s = data.current;
+
+        // Balance
+        const bal = s.spark_balance;
+        document.getElementById('stat-balance').textContent =
+            bal && bal.balance !== undefined ? Number(bal.balance).toLocaleString() : '--';
+
+        // Uptime
+        document.getElementById('stat-uptime').textContent = s.uptime.formatted;
+
+        // Temperature
+        const tempEl = document.getElementById('stat-temp');
+        tempEl.textContent = s.cpu_temp !== null ? s.cpu_temp : '--';
+        tempEl.className = 'text-2xl sm:text-3xl font-display font-bold ' + tempColor(s.cpu_temp);
+
+        // Disk
+        document.getElementById('stat-disk').textContent = s.disk.percent + '%';
+        document.getElementById('stat-disk-bar').style.width = s.disk.percent + '%';
+
+        // RAM detail
+        document.getElementById('stat-ram-detail').textContent =
+            formatBytes(s.ram.used) + ' / ' + formatBytes(s.ram.total) + ' (' + s.ram.percent + '%)';
+
+        // Services
+        for (const svc of ['lnbits', 'spark-sidecar']) {
+            const key = svc.replace('-', '-');
+            const status = s.services[svc] || 'unknown';
+            document.getElementById('svc-' + svc + '-dot').className =
+                'w-2.5 h-2.5 rounded-full ' + svcColor(status);
+            document.getElementById('svc-' + svc + '-status').textContent = status;
+        }
+
+        // Charts
+        const labels = data.history.timestamps.map(t => {
+            const d = new Date(t);
+            return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        });
+
+        cpuChart.data.labels = labels;
+        cpuChart.data.datasets[0].data = data.history.cpu;
+        cpuChart.update('none');
+
+        ramChart.data.labels = labels;
+        ramChart.data.datasets[0].data = data.history.ram;
+        ramChart.update('none');
+
+    } catch (e) {
+        console.error('Stats fetch failed:', e);
+    }
+}
+
+// Initial fetch + poll every 10s
+fetchStats();
+setInterval(fetchStats, 10000);
+
+// ── Actions ────────────────────────────────────────────────────
+let pendingAction = null;
+
+function confirmAction(action, message) {
+    pendingAction = action;
+    document.getElementById('confirm-message').textContent = message;
+    document.getElementById('confirm-modal').classList.remove('hidden');
+    document.getElementById('confirm-btn').onclick = () => executeAction(action);
+}
+
+function closeModal() {
+    document.getElementById('confirm-modal').classList.add('hidden');
+    pendingAction = null;
+}
+
+async function executeAction(action) {
+    closeModal();
+    try {
+        const resp = await fetch('/box/api/' + action, { method: 'POST' });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            // Show brief feedback
+            const msg = action === 'shutdown' ? 'Shutting down...' :
+                        action === 'reboot' ? 'Rebooting...' : data.message;
+            alert(msg);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Request failed');
+    }
+}
+
+async function restartService(service) {
+    if (!confirm('Restart ' + service + '?')) return;
+    try {
+        const resp = await fetch('/box/api/restart/' + service, { method: 'POST' });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            // Refresh stats after restart
+            setTimeout(fetchStats, 2000);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Request failed');
+    }
+}
+</script>
+{% endblock %}

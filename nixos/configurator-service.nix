@@ -5,7 +5,7 @@ let
 in
 {
   systemd.services.lnbitspi-configurator = {
-    description = "LNbitsPi first-run configuration wizard";
+    description = "LNbitsBox first-run setup wizard";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
     wantedBy = [ "multi-user.target" ];

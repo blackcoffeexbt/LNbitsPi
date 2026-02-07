@@ -34,7 +34,7 @@ EOF
   '';
 
   meta = with pkgs.lib; {
-    description = "LNbitsPi first-run configuration wizard";
+    description = "LNbitsBox first-run setup wizard";
     license = pkgs.lib.licenses.mit;
     platforms = pkgs.lib.platforms.linux;
   };

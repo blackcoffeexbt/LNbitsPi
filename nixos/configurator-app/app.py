@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LNbitsPi First-Run Configuration Wizard
+LNbitsBox First-Run Configuration Wizard
 Handles Spark mnemonic generation/import and SSH password setup
 """
 

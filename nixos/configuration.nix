@@ -7,7 +7,7 @@
   raspberry-pi-nix.board = "bcm2711"; # Raspberry Pi 4
 
   # Optional: Customize the firmware partition label (default is "FIRMWARE")
-  raspberry-pi-nix.firmware-partition-label = "LNbitsPi";
+  raspberry-pi-nix.firmware-partition-label = "LNbitsBox";
 
   networking.hostName = "lnbits";
   networking.useDHCP = true;
@@ -80,7 +80,7 @@
   # Display first-boot instructions on login
   environment.etc."motd".text = ''
     ╔═══════════════════════════════════════════════════════════╗
-    ║                    Welcome to LNbitsPi                    ║
+    ║                    Welcome to LNbitsBox                    ║
     ╚═══════════════════════════════════════════════════════════╝
 
     To configure your device, open a web browser and navigate to:

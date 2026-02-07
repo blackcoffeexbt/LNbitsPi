@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LNbitsBox{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {% block head %}{% endblock %}
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ln-pink': '#FF1EE6',
+                        'ln-pink-dim': '#cc18b8',
+                        'ln-surface': '#0f0f14',
+                        'ln-card': '#16161e',
+                        'ln-card-hover': '#1c1c26',
+                        'ln-border': '#2a2a3a',
+                        'ln-text': '#e4e4ef',
+                        'ln-muted': '#7a7a8e',
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'monospace'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Space Grotesk', sans-serif; }
+        .noise-bg::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glow-pink { box-shadow: 0 0 30px rgba(255, 30, 230, 0.15), 0 0 60px rgba(255, 30, 230, 0.05); }
+        input:focus { box-shadow: 0 0 0 1px #FF1EE6, 0 0 20px rgba(255, 30, 230, 0.15); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f0f14; }
+        ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #FF1EE6; }
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(255, 30, 230, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 30, 230, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="bg-ln-surface text-ln-text min-h-screen noise-bg grid-bg">
+    <div class="relative z-10">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+                {% for category, message in messages %}
+                    <div class="{% if category == 'error' %}bg-red-500/10 border-red-500/30 text-red-300{% elif category == 'success' %}bg-emerald-500/10 border-emerald-500/30 text-emerald-300{% else %}bg-amber-500/10 border-amber-500/30 text-amber-300{% endif %} border px-4 py-3 rounded-lg font-mono text-sm">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

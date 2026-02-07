@@ -11,7 +11,7 @@ pkgs.writeScriptBin "lnbitspi-reset" ''
   fi
 
   echo "═══════════════════════════════════════════════════════"
-  echo "  LNbitsPi Configuration Reset"
+  echo "  LNbitsBox Configuration Reset"
   echo "═══════════════════════════════════════════════════════"
   echo ""
   echo "This will:"

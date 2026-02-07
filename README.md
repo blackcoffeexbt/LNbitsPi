@@ -133,7 +133,7 @@ zstd -d nixos-sd-image-*.img.zst
 
 ### Step 4: Complete the setup wizard
 
-On first boot, LNbitsPi presents a configuration wizard at `http://<pi-ip-address>/`
+On first boot, LNbitsBox presents a configuration wizard at `http://<pi-ip-address>/`
 
 **Open your browser:**
 ```
