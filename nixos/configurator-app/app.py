@@ -192,6 +192,7 @@ def complete():
             else:
                 subprocess.run(["systemctl", "start", "spark-sidecar.service"], check=False)
                 subprocess.run(["systemctl", "start", "lnbits.service"], check=False)
+                subprocess.run(["systemctl", "start", "lnbitspi-admin.service"], check=False)
 
         threading.Thread(target=finalize, daemon=True).start()
 
