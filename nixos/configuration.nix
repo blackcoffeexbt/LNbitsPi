@@ -12,6 +12,10 @@
   networking.hostName = "lnbits";
   networking.useDHCP = true;
 
+  # NetworkManager for WiFi management (wired still handled by systemd-networkd)
+  networking.networkmanager.enable = true;
+  networking.networkmanager.wifi.powersave = false;
+
   # OpenSSH for headless access
   services.openssh.enable = true;
   services.openssh.settings = {

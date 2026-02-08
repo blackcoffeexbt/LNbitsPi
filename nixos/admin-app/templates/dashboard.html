@@ -101,7 +101,11 @@
         {# System Actions #}
         <div class="bg-ln-card border border-ln-border rounded-xl p-4 sm:p-5">
             <div class="text-ln-muted text-xs font-mono uppercase tracking-wider mb-4">System</div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
+                <button onclick="openWifiModal()"
+                        class="bg-ln-surface hover:bg-ln-card-hover border border-ln-border hover:border-ln-pink/30 text-ln-text font-mono text-sm py-3 px-4 rounded-lg transition-all duration-200">
+                    WiFi
+                </button>
                 <button onclick="confirmAction('reboot', 'Reboot the Pi?')"
                         class="bg-ln-surface hover:bg-ln-card-hover border border-ln-border hover:border-amber-500/30 text-ln-text font-mono text-sm py-3 px-4 rounded-lg transition-all duration-200">
                     Reboot
@@ -140,6 +144,50 @@
                     class="flex-1 bg-ln-pink hover:bg-ln-pink-dim text-white font-mono text-sm py-2.5 rounded-lg transition-colors">
                 Confirm
             </button>
+        </div>
+    </div>
+</div>
+
+{# ── WiFi Modal ── #}
+<div id="wifi-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-ln-card border border-ln-border rounded-2xl p-6 max-w-md w-full glow-pink">
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-lg font-display font-semibold">WiFi Networks</p>
+            <button onclick="closeWifiModal()" class="text-ln-muted hover:text-ln-pink transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {# Current status #}
+        <div id="wifi-status" class="mb-4 px-3 py-2 rounded-lg bg-ln-surface border border-ln-border hidden">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span class="text-sm font-mono text-ln-text" id="wifi-status-text"></span>
+            </div>
+        </div>
+
+        {# Scan button #}
+        <button onclick="scanWifi()" id="wifi-scan-btn"
+                class="w-full bg-ln-surface hover:bg-ln-card-hover border border-ln-border text-ln-text font-mono text-sm py-2.5 rounded-lg transition-colors mb-4">
+            <span id="wifi-scan-label">Scan Networks</span>
+        </button>
+
+        {# Network list #}
+        <div id="wifi-list" class="space-y-2 max-h-64 overflow-y-auto mb-4"></div>
+
+        {# Password input (shown after selecting a secured network) #}
+        <div id="wifi-connect-form" class="hidden">
+            <div class="border-t border-ln-border pt-4 mt-2">
+                <p class="text-sm font-mono text-ln-muted mb-1">Connecting to: <span id="wifi-selected-ssid" class="text-ln-text"></span></p>
+                <input type="password" id="wifi-password" placeholder="Password"
+                       class="w-full bg-ln-surface border border-ln-border rounded-lg px-4 py-3 text-ln-text font-mono text-sm outline-none transition-all mb-3">
+                <button onclick="connectWifi()" id="wifi-connect-btn"
+                        class="w-full bg-ln-pink hover:bg-ln-pink-dim text-white font-mono text-sm py-2.5 rounded-lg transition-colors">
+                    Connect
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -324,6 +372,142 @@ async function restartService(service) {
         }
     } catch (e) {
         alert('Request failed');
+    }
+}
+
+// ── WiFi ──────────────────────────────────────────────────────
+let selectedSsid = '';
+let selectedSecurity = '';
+
+function openWifiModal() {
+    document.getElementById('wifi-modal').classList.remove('hidden');
+    document.getElementById('wifi-connect-form').classList.add('hidden');
+    document.getElementById('wifi-list').innerHTML = '';
+    fetchWifiStatus();
+    scanWifi();
+}
+
+function closeWifiModal() {
+    document.getElementById('wifi-modal').classList.add('hidden');
+    selectedSsid = '';
+}
+
+async function fetchWifiStatus() {
+    try {
+        const resp = await fetch('/box/api/wifi/status');
+        const data = await resp.json();
+        const el = document.getElementById('wifi-status');
+        const txt = document.getElementById('wifi-status-text');
+        if (data.connected && data.ssid) {
+            txt.textContent = data.ssid + (data.ip ? ' (' + data.ip + ')' : '');
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    } catch (e) {}
+}
+
+function signalIcon(signal) {
+    if (signal >= 70) return '▂▄▆█';
+    if (signal >= 50) return '▂▄▆░';
+    if (signal >= 30) return '▂▄░░';
+    return '▂░░░';
+}
+
+function signalColor(signal) {
+    if (signal >= 70) return 'text-emerald-400';
+    if (signal >= 50) return 'text-amber-400';
+    return 'text-red-400';
+}
+
+async function scanWifi() {
+    const btn = document.getElementById('wifi-scan-btn');
+    const label = document.getElementById('wifi-scan-label');
+    btn.disabled = true;
+    label.textContent = 'Scanning...';
+
+    try {
+        const resp = await fetch('/box/api/wifi/scan');
+        const data = await resp.json();
+        const list = document.getElementById('wifi-list');
+        list.innerHTML = '';
+
+        if (!data.networks || data.networks.length === 0) {
+            list.innerHTML = '<p class="text-ln-muted text-sm font-mono text-center py-4">No networks found</p>';
+            return;
+        }
+
+        for (const net of data.networks) {
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between px-3 py-2.5 rounded-lg bg-ln-surface border border-ln-border hover:border-ln-pink/30 cursor-pointer transition-colors';
+            div.onclick = () => selectNetwork(net.ssid, net.security, net.connected);
+            div.innerHTML =
+                '<div class="flex items-center gap-3 min-w-0">' +
+                    (net.connected ? '<div class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></div>' : '') +
+                    '<span class="font-mono text-sm truncate">' + escapeHtml(net.ssid) + '</span>' +
+                    (net.security ? '<span class="text-ln-muted text-xs flex-shrink-0">🔒</span>' : '') +
+                '</div>' +
+                '<span class="font-mono text-xs ' + signalColor(net.signal) + ' flex-shrink-0 ml-2">' + signalIcon(net.signal) + '</span>';
+            list.appendChild(div);
+        }
+    } catch (e) {
+        document.getElementById('wifi-list').innerHTML = '<p class="text-red-400 text-sm font-mono text-center py-4">Scan failed</p>';
+    } finally {
+        btn.disabled = false;
+        label.textContent = 'Scan Networks';
+    }
+}
+
+function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function selectNetwork(ssid, security, connected) {
+    selectedSsid = ssid;
+    selectedSecurity = security;
+    const form = document.getElementById('wifi-connect-form');
+    const pwd = document.getElementById('wifi-password');
+
+    document.getElementById('wifi-selected-ssid').textContent = ssid;
+    pwd.value = '';
+
+    if (!security) {
+        // Open network — connect immediately
+        connectWifi();
+        return;
+    }
+
+    form.classList.remove('hidden');
+    pwd.focus();
+}
+
+async function connectWifi() {
+    const btn = document.getElementById('wifi-connect-btn');
+    const pwd = document.getElementById('wifi-password').value;
+    btn.disabled = true;
+    btn.textContent = 'Connecting...';
+
+    try {
+        const resp = await fetch('/box/api/wifi/connect', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ ssid: selectedSsid, password: pwd }),
+        });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            document.getElementById('wifi-connect-form').classList.add('hidden');
+            fetchWifiStatus();
+            scanWifi();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        alert('Connection failed');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Connect';
     }
 }
 </script>

@@ -267,5 +267,122 @@ def api_restart_service(service):
         return jsonify({"status": "error", "message": e.stderr.decode()}), 500
 
 
+# ── WiFi ───────────────────────────────────────────────────────────
+
+def parse_nmcli_line(line):
+    """Parse nmcli terse output line, handling escaped colons in SSIDs"""
+    fields = []
+    current = []
+    i = 0
+    while i < len(line):
+        if line[i] == '\\' and i + 1 < len(line):
+            current.append(line[i + 1])
+            i += 2
+        elif line[i] == ':':
+            fields.append(''.join(current))
+            current = []
+            i += 1
+        else:
+            current.append(line[i])
+            i += 1
+    fields.append(''.join(current))
+    return fields
+
+
+@app.route("/box/api/wifi/scan")
+@login_required
+def api_wifi_scan():
+    if DEV_MODE:
+        return jsonify({"networks": [
+            {"ssid": "MyNetwork", "signal": 85, "security": "WPA2", "connected": True},
+            {"ssid": "Neighbor", "signal": 60, "security": "WPA2", "connected": False},
+            {"ssid": "OpenWifi", "signal": 40, "security": "", "connected": False},
+        ]})
+    try:
+        subprocess.run(["nmcli", "device", "wifi", "rescan"],
+                       capture_output=True, timeout=10)
+        time.sleep(2)
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY,IN-USE", "device", "wifi", "list"],
+            capture_output=True, text=True, timeout=10
+        )
+        networks = []
+        seen = set()
+        for line in result.stdout.strip().split("\n"):
+            if not line:
+                continue
+            parts = parse_nmcli_line(line)
+            if len(parts) >= 4:
+                ssid = parts[0]
+                if not ssid or ssid in seen:
+                    continue
+                seen.add(ssid)
+                networks.append({
+                    "ssid": ssid,
+                    "signal": int(parts[1]) if parts[1].isdigit() else 0,
+                    "security": parts[2],
+                    "connected": parts[3] == "*",
+                })
+        networks.sort(key=lambda n: n["signal"], reverse=True)
+        return jsonify({"networks": networks})
+    except Exception as e:
+        return jsonify({"networks": [], "error": str(e)})
+
+
+@app.route("/box/api/wifi/connect", methods=["POST"])
+@login_required
+def api_wifi_connect():
+    data = request.get_json()
+    ssid = data.get("ssid", "")
+    password = data.get("password", "")
+
+    if not ssid:
+        return jsonify({"status": "error", "message": "SSID required"}), 400
+
+    if DEV_MODE:
+        return jsonify({"status": "ok", "message": f"DEV MODE: would connect to {ssid}"})
+
+    try:
+        cmd = ["nmcli", "device", "wifi", "connect", ssid]
+        if password:
+            cmd += ["password", password]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return jsonify({"status": "ok", "message": f"Connected to {ssid}"})
+        else:
+            msg = result.stderr.strip() or result.stdout.strip() or "Connection failed"
+            return jsonify({"status": "error", "message": msg}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/box/api/wifi/status")
+@login_required
+def api_wifi_status():
+    if DEV_MODE:
+        return jsonify({"connected": True, "ssid": "MyNetwork", "ip": "192.168.1.100"})
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.strip().split("\n"):
+            parts = parse_nmcli_line(line)
+            if len(parts) >= 4 and parts[1] == "wifi" and parts[2] == "connected":
+                ip_result = subprocess.run(
+                    ["nmcli", "-t", "-f", "IP4.ADDRESS", "device", "show", parts[0]],
+                    capture_output=True, text=True, timeout=5
+                )
+                ip = ""
+                for ip_line in ip_result.stdout.strip().split("\n"):
+                    if "IP4.ADDRESS" in ip_line:
+                        ip = ip_line.split(":")[-1].split("/")[0]
+                        break
+                return jsonify({"connected": True, "ssid": parts[3], "ip": ip})
+        return jsonify({"connected": False})
+    except Exception as e:
+        return jsonify({"connected": False, "error": str(e)})
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8090, debug=DEV_MODE)

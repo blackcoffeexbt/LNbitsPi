@@ -16,7 +16,7 @@ in
     };
 
     # systemctl must be in PATH for service restart/shutdown commands
-    path = [ pkgs.systemd ];
+    path = [ pkgs.systemd pkgs.networkmanager ];
 
     serviceConfig = {
       Type = "simple";
