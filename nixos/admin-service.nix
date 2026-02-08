@@ -16,7 +16,7 @@ in
     };
 
     # systemctl must be in PATH for service restart/shutdown commands
-    path = [ pkgs.systemd pkgs.networkmanager ];
+    path = [ pkgs.systemd pkgs.wpa_supplicant pkgs.iw ];
 
     serviceConfig = {
       Type = "simple";

@@ -10,10 +10,12 @@
   raspberry-pi-nix.firmware-partition-label = "LNbitsBox";
 
   networking.hostName = "lnbits";
+  networking.useDHCP = true;
 
-  # NetworkManager handles DHCP for both wired and WiFi
-  networking.networkmanager.enable = true;
-  networking.networkmanager.wifi.powersave = false;
+  # WiFi via wpa_supplicant (lightweight, no NetworkManager)
+  networking.wireless.enable = true;
+  networking.wireless.userControlled.enable = true;
+  networking.wireless.allowAuxiliaryImperativeNetworks = true;
 
   # OpenSSH for headless access
   services.openssh.enable = true;

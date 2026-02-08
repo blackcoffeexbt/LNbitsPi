@@ -267,26 +267,45 @@ def api_restart_service(service):
         return jsonify({"status": "error", "message": e.stderr.decode()}), 500
 
 
-# ── WiFi ───────────────────────────────────────────────────────────
+# ── WiFi (wpa_cli + iw) ────────────────────────────────────────────
 
-def parse_nmcli_line(line):
-    """Parse nmcli terse output line, handling escaped colons in SSIDs"""
-    fields = []
-    current = []
-    i = 0
-    while i < len(line):
-        if line[i] == '\\' and i + 1 < len(line):
-            current.append(line[i + 1])
-            i += 2
-        elif line[i] == ':':
-            fields.append(''.join(current))
-            current = []
-            i += 1
-        else:
-            current.append(line[i])
-            i += 1
-    fields.append(''.join(current))
-    return fields
+WIFI_IFACE = "wlan0"
+
+
+def wpa_cli(*args):
+    """Run a wpa_cli command and return stdout"""
+    result = subprocess.run(
+        ["wpa_cli", "-i", WIFI_IFACE] + list(args),
+        capture_output=True, text=True, timeout=10
+    )
+    return result.stdout.strip()
+
+
+def get_current_ssid():
+    """Get the SSID of the currently connected network"""
+    try:
+        status = wpa_cli("status")
+        for line in status.split("\n"):
+            if line.startswith("ssid="):
+                return line.split("=", 1)[1]
+    except Exception:
+        pass
+    return None
+
+
+def get_wifi_ip():
+    """Get IP address of WiFi interface"""
+    try:
+        result = subprocess.run(
+            ["ip", "-4", "-o", "addr", "show", WIFI_IFACE],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.strip().split("\n"):
+            if "inet " in line:
+                return line.split("inet ")[1].split("/")[0]
+    except Exception:
+        pass
+    return ""
 
 
 @app.route("/box/api/wifi/scan")
@@ -299,30 +318,34 @@ def api_wifi_scan():
             {"ssid": "OpenWifi", "signal": 40, "security": "", "connected": False},
         ]})
     try:
-        subprocess.run(["nmcli", "device", "wifi", "rescan"],
-                       capture_output=True, timeout=10)
-        time.sleep(2)
-        result = subprocess.run(
-            ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY,IN-USE", "device", "wifi", "list"],
-            capture_output=True, text=True, timeout=10
-        )
+        wpa_cli("scan")
+        time.sleep(3)
+        raw = wpa_cli("scan_results")
+        current_ssid = get_current_ssid()
         networks = []
         seen = set()
-        for line in result.stdout.strip().split("\n"):
-            if not line:
+        for line in raw.split("\n"):
+            if line.startswith("bssid") or not line.strip():
                 continue
-            parts = parse_nmcli_line(line)
-            if len(parts) >= 4:
-                ssid = parts[0]
-                if not ssid or ssid in seen:
-                    continue
-                seen.add(ssid)
-                networks.append({
-                    "ssid": ssid,
-                    "signal": int(parts[1]) if parts[1].isdigit() else 0,
-                    "security": parts[2],
-                    "connected": parts[3] == "*",
-                })
+            # Format: bssid / frequency / signal / flags / ssid
+            parts = line.split("\t")
+            if len(parts) < 5:
+                continue
+            ssid = parts[4].strip()
+            if not ssid or ssid in seen:
+                continue
+            seen.add(ssid)
+            signal_dbm = int(parts[2]) if parts[2].lstrip("-").isdigit() else -100
+            # Convert dBm to percentage (rough: -30=100%, -90=0%)
+            signal_pct = max(0, min(100, (signal_dbm + 90) * 100 // 60))
+            flags = parts[3]
+            has_security = "WPA" in flags or "WEP" in flags
+            networks.append({
+                "ssid": ssid,
+                "signal": signal_pct,
+                "security": "WPA" if "WPA" in flags else ("WEP" if "WEP" in flags else ""),
+                "connected": ssid == current_ssid,
+            })
         networks.sort(key=lambda n: n["signal"], reverse=True)
         return jsonify({"networks": networks})
     except Exception as e:
@@ -343,15 +366,33 @@ def api_wifi_connect():
         return jsonify({"status": "ok", "message": f"DEV MODE: would connect to {ssid}"})
 
     try:
-        cmd = ["nmcli", "device", "wifi", "connect", ssid]
+        # Add network via wpa_cli
+        net_id = wpa_cli("add_network")
+        if not net_id.isdigit():
+            return jsonify({"status": "error", "message": "Failed to add network"}), 500
+
+        wpa_cli("set_network", net_id, "ssid", f'"{ssid}"')
         if password:
-            cmd += ["password", password]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if result.returncode == 0:
+            wpa_cli("set_network", net_id, "psk", f'"{password}"')
+        else:
+            wpa_cli("set_network", net_id, "key_mgmt", "NONE")
+
+        result = wpa_cli("enable_network", net_id)
+        if "OK" not in result:
+            wpa_cli("remove_network", net_id)
+            return jsonify({"status": "error", "message": "Failed to enable network"}), 500
+
+        wpa_cli("save_config")
+
+        # Wait briefly for connection
+        time.sleep(3)
+
+        # Verify connection
+        current = get_current_ssid()
+        if current == ssid:
             return jsonify({"status": "ok", "message": f"Connected to {ssid}"})
         else:
-            msg = result.stderr.strip() or result.stdout.strip() or "Connection failed"
-            return jsonify({"status": "error", "message": msg}), 500
+            return jsonify({"status": "ok", "message": f"Connecting to {ssid}..."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -362,23 +403,9 @@ def api_wifi_status():
     if DEV_MODE:
         return jsonify({"connected": True, "ssid": "MyNetwork", "ip": "192.168.1.100"})
     try:
-        result = subprocess.run(
-            ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"],
-            capture_output=True, text=True, timeout=5
-        )
-        for line in result.stdout.strip().split("\n"):
-            parts = parse_nmcli_line(line)
-            if len(parts) >= 4 and parts[1] == "wifi" and parts[2] == "connected":
-                ip_result = subprocess.run(
-                    ["nmcli", "-t", "-f", "IP4.ADDRESS", "device", "show", parts[0]],
-                    capture_output=True, text=True, timeout=5
-                )
-                ip = ""
-                for ip_line in ip_result.stdout.strip().split("\n"):
-                    if "IP4.ADDRESS" in ip_line:
-                        ip = ip_line.split(":")[-1].split("/")[0]
-                        break
-                return jsonify({"connected": True, "ssid": parts[3], "ip": ip})
+        ssid = get_current_ssid()
+        if ssid:
+            return jsonify({"connected": True, "ssid": ssid, "ip": get_wifi_ip()})
         return jsonify({"connected": False})
     except Exception as e:
         return jsonify({"connected": False, "error": str(e)})
