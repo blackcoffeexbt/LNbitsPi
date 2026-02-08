@@ -10,9 +10,8 @@
   raspberry-pi-nix.firmware-partition-label = "LNbitsBox";
 
   networking.hostName = "lnbits";
-  networking.useDHCP = true;
 
-  # NetworkManager for WiFi management (wired still handled by systemd-networkd)
+  # NetworkManager handles DHCP for both wired and WiFi
   networking.networkmanager.enable = true;
   networking.networkmanager.wifi.powersave = false;
 
