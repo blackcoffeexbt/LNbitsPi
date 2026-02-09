@@ -17,10 +17,17 @@ let
       '	log {' \
       '		output discard' \
       '	}' \
+      '	on_demand_tls {' \
+      '		interval 2m' \
+      '		burst 5' \
+      '	}' \
       '}' \
       "" \
       'https:// {' \
-      '	tls internal' \
+      '	tls {' \
+      '		on_demand' \
+      '		issuer internal' \
+      '	}' \
       "" \
       '	handle /box/* {' \
       '		reverse_proxy 127.0.0.1:8090' \
