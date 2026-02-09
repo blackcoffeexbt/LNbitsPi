@@ -275,7 +275,7 @@ WIFI_IFACE = "wlan0"
 def wpa_cli(*args):
     """Run a wpa_cli command and return stdout"""
     result = subprocess.run(
-        ["wpa_cli", "-i", WIFI_IFACE] + list(args),
+        ["wpa_cli", "-i", WIFI_IFACE, "-p", "/run/wpa_supplicant"] + list(args),
         capture_output=True, text=True, timeout=10
     )
     return result.stdout.strip()
