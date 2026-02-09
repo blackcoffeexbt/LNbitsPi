@@ -12,34 +12,34 @@ let
       BACKEND="127.0.0.1:8080"
     fi
 
-    cat > ${caddyfile} <<CADDYEOF
-{
-  log {
-    output discard
-  }
-}
-
-:443 {
-  tls internal
-
-  handle /box/* {
-    reverse_proxy 127.0.0.1:8090
-  }
-
-  handle {
-    reverse_proxy $BACKEND {
-      transport http {
-        read_timeout 300s
-        write_timeout 300s
-      }
-    }
-  }
-}
-
-:80 {
-  redir https://{host}{uri} permanent
-}
-CADDYEOF
+    printf '%s\n' \
+      '{' \
+      '	log {' \
+      '		output discard' \
+      '	}' \
+      '}' \
+      "" \
+      'https:// {' \
+      '	tls internal' \
+      "" \
+      '	handle /box/* {' \
+      '		reverse_proxy 127.0.0.1:8090' \
+      '	}' \
+      "" \
+      '	handle {' \
+      "		reverse_proxy $BACKEND {" \
+      '			transport http {' \
+      '				read_timeout 300s' \
+      '				write_timeout 300s' \
+      '			}' \
+      '		}' \
+      '	}' \
+      '}' \
+      "" \
+      'http:// {' \
+      '	redir https://{host}{uri} permanent' \
+      '}' \
+      > ${caddyfile}
   '';
 
   # Script to regenerate config and reload Caddy
